@@ -1,0 +1,137 @@
+#!/usr/bin/python2.6  
+# -*- coding: utf-8 -*- 
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+import healpy as hp
+import scipy.signal as signal
+def read_file():
+    with h5py.File('1Mhz_fitted_param.hdf5','r') as f:
+        params_1 = f['params'][:]
+    with h5py.File('5Mhz_fitted_param.hdf5','r') as g:
+        params_5 = g['params'][:]
+    return params_1,params_5
+
+def plot():
+    params_1,params_5 = read_file()
+
+
+    val_ls = (params_1 - params_5)/params_1 * 100
+
+    scale_ls = np.arange(params_1.size)
+    index_ls = ['A_v','R_0','alpha','R_1','beta','Z','gamma']
+    plt.bar(scale_ls, val_ls)
+    _ = plt.xticks(scale_ls,index_ls) ## 可以设置坐标字
+    plt.title('relative error between params of 1 and 5MHz')
+    plt.savefig('linshi.png',ppi=200)
+#plot()
+
+def error_(smooth_diffuse_1,unabsorb_1,unabsorb_1_sech2):
+    #for exp term of emi_form
+    mask = np.isnan(smooth_diffuse_1)
+    N_pix = np.where(~mask)[0].size
+    print ('N_pix',N_pix,'smooth_diffuse_1.shape',smooth_diffuse_1.shape)
+    
+    smooth_diffuse_1 = np.ma.array(smooth_diffuse_1,mask = mask)
+    unabsorb_1 = np.ma.array(unabsorb_1, mask = mask)
+    data_ = (smooth_diffuse_1 - unabsorb_1)/smooth_diffuse_1* 100
+    print(data_.size,'data_size')
+    
+    
+    fig,ax = plt.subplots(2,1,sharex=True,figsize=(8,8))
+    ax[0].plot(np.arange(data_.size),data_,'bo',Markersize=1)
+    #ax[0].set_xlabel('pixel number')
+    ax[0].set_ylabel('(input_map - fitted_map)/fitted_map * 100')
+    error = (np.sqrt(np.sum(np.square(smooth_diffuse_1 - unabsorb_1)))/(np.sqrt(N_pix)*np.mean(smooth_diffuse_1)) )* 100
+    #ax[0].set_title('exp_'+'np.sqrt(np.sum(np.square(input_map - fitted_map)))/(np.sqrt(input_map.size)*np.mean(input_map)) * 100'+' = '+str(error))
+    ax[0].set_title('exp(Z/Z_0)_total_error : '+str(error))
+    print ('error',error)
+    #plt.show()
+   
+    #for sech2 term of emi_form
+    mask = np.isnan(smooth_diffuse_1)
+    N_pix = np.where(~mask)[0].size
+    print ('N_pix',N_pix,'smooth_diffuse_1.shape',smooth_diffuse_1.shape)
+    smooth_diffuse_1 = np.ma.array(smooth_diffuse_1,mask = mask)
+    unabsorb_1_sech2 = np.ma.array(unabsorb_1_sech2, mask = mask)
+    data_ = (smooth_diffuse_1 - unabsorb_1_sech2)/smooth_diffuse_1* 100
+
+    #plt.figure("j")
+    ax[1].plot(np.arange(data_.size),data_,'o')
+    ax[1].set_xlabel('pixel number')
+    ax[1].set_ylabel('(input_map - fitted_map)/fitted_map * 100')
+    error = (np.sqrt(np.sum(np.square(smooth_diffuse_1 - unabsorb_1_sech2)))/(np.sqrt(N_pix)*np.mean(smooth_diffuse_1)) )* 100
+    #ax[1].set_title('sech2_'+'np.sqrt(np.sum(np.square(input_map - fitted_map)))/(np.sqrt(input_map.size)*np.mean(input_map)) * 100'+' = '+str(error))
+    ax[1].set_title('sech2(Z/Z_0)_total_error : ' +str(error))
+    print ('error',error)
+    plt.savefig('2_figure_sech2_or_exp.png',ppi = 200)
+    #plt.show()
+    
+    hp_data = data_.copy()
+    hp_data[mask] = hp.UNSEEN
+    plt.figure(1)
+    hp.mollview(hp_data,cmap =plt.cm.jet)
+    plt.title('residual')
+    #plt.show()
+    plt.savefig('residual.png',ppi=200) 
+    return 0
+file_dir = '/public/home/wufq/congyanping/Software/LFSAM/global_spectrum_NE2001/constant_index_minus_I_E/Dowell_fitted_constant_I_E/'
+#file_dir = './'
+with h5py.File(file_dir + '1MHz_Smooth_after_mask_smooth_diffuse_x.hdf5','r') as f:
+    smooth_diffuse_1 = f['smooth_diffuse'][:]
+with h5py.File(file_dir+'/output/exp1Mhz_delt_m_and_unabsorb_and_delt_m_percentage.hdf5','r') as g:
+    unabsorb_1 = g['integrated_temperature_total_m'][:]
+
+def read_diffuse_x_smooth_x():
+    with h5py.File('1MHz_Smooth_after_mask_smooth_diffuse_x.hdf5','r') as f:
+        print f.keys()
+        smooth_diffuse = f['smooth_diffuse'][:]
+        masked_diffuse = f['masked_diffuse'][:]
+    pix_number = []
+    for l in np.arange(-180,180,4):
+        pix_number.append(hp.ang2pix(2**4,l,0.,lonlat = True))
+    print pix_number,'pix_number'
+    L = np.arange(-180,180,4)
+    unsmoothed = masked_diffuse[pix_number]
+    smoothed = smooth_diffuse[pix_number]
+    medfilted = signal.medfilt(unsmoothed,13)
+    plt.figure(1)
+    plt.plot(L,unsmoothed,label='raw')
+    plt.plot(L,smoothed,label='smoothed')
+    plt.plot(L,medfilted,c='black',label='medfilted')
+    plt.legend(loc='best')
+    plt.savefig('test.png')
+    np.savetxt(r'./test.txt', np.column_stack((L,unsmoothed,smoothed)),fmt='%.4f %.4f %.4f',header = "l, diffuse_1MHz,smoothed_1MHz") 
+def read_408MHz():
+    
+    with h5py.File('/public/home/wufq/congyanping/Software/LFSAM/Index/Index_diffuse_1MHz.hdf5','r') as g:
+        diffuse_408 = g['diffuse_408'][:]
+    pix_number = []
+    l1,b1 = hp.pix2ang(512,1573319,lonlat = True)
+    l2,b2 = hp.pix2ang(512,1573320,lonlat = True)
+    delt_l = l2 - l1
+    for l in np.arange(-180,180,delt_l):
+        pix_number.append(hp.ang2pix(512,l,0.,lonlat = True))
+    print 'pix_number',pix_number
+
+    diffuse_408_fixed_b = diffuse_408[pix_number]
+    L= np.arange(-180,180,delt_l)
+    plt.figure(2)
+    plt.plot(L,diffuse_408_fixed_b)
+    plt.savefig('test_408.png')
+    #np.savetxt(r'./test_408.txt',diffuse_408_fixed_b)
+    np.savetxt(r'./test_408.txt', np.column_stack((L,diffuse_408_fixed_b)),fmt='%.4f %.4f',header = "l, diffuse_408") 
+    return
+
+read_diffuse_x_smooth_x() 
+#read_408MHz()
+
+"""
+#minus I_E from unabsorb,because it has been added I_E in the processing of calculate
+smooth_diffuse_1 = smooth_diffuse_1 +72107916.58464544
+
+unabsorb_1 = unabsorb_1
+#unabsorb_1 = unabsorb_1 - 72107916.58464544
+unabsorb_1_sech2 = unabsorb_1.copy()
+error_(smooth_diffuse_1,unabsorb_1,unabsorb_1_sech2)
+"""
