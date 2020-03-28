@@ -1,0 +1,181 @@
+import h5py
+import matplotlib.pyplot as plt
+import healpy as hp
+import numpy as np
+from "../../SSM" import SSM
+
+class produce_index(object):
+    
+    def __init__(self, Nside, ssmpath, catalog = False, smin = None, input_freq = [10,22,45,85,150,408]):
+        self.nside = Nside
+        #self.freq = freq
+        self.catalog = catalog
+        self.smin = smin
+        self.ssmpath = ssmpath
+        self.input_freq = input_freq
+    def SSM_(self, freq):
+        diffuse, source, catalog = SSM(freq = freq, nside = self.nside, catalog = self.catalog, Smin = self.smin, inSSMpath = self.ssmpath) 
+        return diffuse, source, catalog
+    
+    def read_file(self):
+        dict = {}
+        for freq in self.input_freq:
+            diffuse, source, catalog = self.SSM_(freq)
+            dict.update({freq:diffuse})
+        return dict
+
+
+        #f = h5py.File('../init_input/10_22_45_85_150MHz.hdf5','r')
+        #g = h5py.File('../init_input/diffuse_408MHz.hdf5','r')
+        #diffuse_10 = f['diffuse_10'][:]
+        #diffuse_22 = f['diffuse_22'][:]
+        #diffuse_45 = f['diffuse_45'][:]
+        #diffuse_85 = f['diffuse_85'][:]
+        #diffuse_150 = f['diffuse_150'][:]
+        #diffuse_408 = g['diffuse_408'][:]
+        #
+        ##print ('raw_difffuse',diffuse_408)
+        ##plt.figure(222)
+        ##hp.mollview(np.log10(diffuse_408),cmap = plt.cm.jet)
+        ##plt.title('raw_diffuse408' + ' mean=' + str(np.mean(diffuse_408)))
+        ##plt.show()
+        #
+        #f.close()
+        #g.close()
+        #return {10:diffuse_10,45:diffuse_45,85:diffuse_85,150:diffuse_150,408:diffuse_408}
+
+    def diff_index(self):
+        #for item in read_file.item():
+        #index : array like
+        index = []
+        data = self.read_file()
+        for (k1,v1) in  data.items():
+            for (k2,v2) in data.items():
+                if (k1 != k2) and (k2 > k1):
+                    alpha = np.log10(v2/v1) / np.log10(k2/k1)
+                    index.append(alpha)
+        return index
+
+    def plot_index(self):
+        index = self.diff_index()
+        plt.figure(2)
+        for map in index:
+            hp.mollview(map, cmap = plt.cm.jet)
+            plt.show()
+        return
+
+    def plot_fixed_pixel_index(self):
+        index = self.diff_index()
+        import random
+        n = random.randint(0,index[0].shape[0]-1)
+        Y = []
+        for i in index:
+            Y.append(i[n])
+        plt.figure(3)
+        plt.plot(np.arange(len(Y)),Y)
+        plt.show()
+        return
+
+    def mean_index(self):
+        index = self.diff_index()
+        void = np.zeros_like(index[0])
+        for i in index:
+            void += i
+        void = void / len(index)
+        return void
+        
+
+
+    def save_data(self):
+        
+        index = self.mean_index()
+        
+        diffuse = read_file()
+        
+        data = list(diffuse.items())[-1]
+        data_freq = data[0]
+        data_diffuse = data[1]
+        
+
+        diffuse_1 = np.multiply(data_diffuse ,(1./data_freq)**index)
+        
+        diffuse_2 = np.multiply(data_diffuse ,(2./data_freq)**index)
+        
+        diffuse_3 = np.multiply(data_diffuse ,(3./data_freq)**index)
+        
+        diffuse_4 = np.multiply(data_diffuse ,(4./data_freq)**index)
+        
+        diffuse_5 = np.multiply(data_diffuse ,(5./data_freq)**index)
+        diffuse_6 = np.multiply(data_diffuse ,(6./data_freq)**index)
+        diffuse_7 = np.multiply(data_diffuse ,(7./data_freq)**index)
+        diffuse_8 = np.multiply(data_diffuse ,(8./data_freq)**index)
+        diffuse_9 = np.multiply(data_diffuse ,(9./data_freq)**index)
+        
+        diffuse_10 = np.multiply(data_diffuse,(10./data_freq)**index)
+        
+        diffuse_20 = np.multiply(data_diffuse, (20./data_freq)**index)
+        
+        diffuse_30 = np.multiply(data_diffuse, (30./data_freq)**index)
+        
+        diffuse_40 = np.multiply(data_diffuse, (40./data_freq)**index)
+        diffuse_50 = np.multiply(data_diffuse, (50./data_freq)**index)
+        diffuse_60 = np.multiply(data_diffuse, (60./data_freq)**index)
+        diffuse_70 = np.multiply(data_diffuse, (70./data_freq)**index)
+        diffuse_80 = np.multiply(data_diffuse, (80./data_freq)**index)
+        diffuse_90 = np.multiply(data_diffuse, (90./data_freq)**index)
+        diffuse_100 = np.multiply(data_diffuse, (100./data_freq)**index)
+        
+        diffuse_408 = np.multiply(data_diffuse, (408./data_freq)**index)
+        
+        print ('diffuse_408',diffuse_408)
+        plt.figure(1)
+        hp.mollview(np.log10(diffuse_1),cmap = plt.cm.jet)
+        plt.show()
+        
+        plt.figure(408)
+        hp.mollview(np.log10(diffuse_100),cmap = plt.cm.jet)
+        
+        plt.title(str(np.mean(diffuse_100)))
+        plt.show()
+        
+        with h5py.File('diffuse_data_with_diff_index.hdf5', 'w') as f:
+            f.create_dataset('diffuse_1',data = diffuse_1)
+            f.create_dataset('diffuse_2',data = diffuse_2)
+            f.create_dataset('diffuse_3',data = diffuse_3)
+            f.create_dataset('diffuse_4',data = diffuse_4)
+            f.create_dataset('diffuse_5',data = diffuse_5)
+            f.create_dataset('diffuse_6',data = diffuse_6)
+            f.create_dataset('diffuse_7',data = diffuse_7)
+            f.create_dataset('diffuse_8',data = diffuse_8)
+            f.create_dataset('diffuse_9',data = diffuse_9)
+
+            f.create_dataset('diffuse_10',data = diffuse_10)
+            f.create_dataset('diffuse_20',data = diffuse_20)
+            f.create_dataset('diffuse_30',data = diffuse_30)
+            f.create_dataset('diffuse_40',data = diffuse_40)
+            f.create_dataset('diffuse_50',data = diffuse_50)
+            f.create_dataset('diffuse_60',data = diffuse_60)
+            f.create_dataset('diffuse_70',data = diffuse_70)
+            f.create_dataset('diffuse_80',data = diffuse_80)
+            f.create_dataset('diffuse_90',data = diffuse_90)
+            f.create_dataset('diffuse_100',data = diffuse_100)
+            f.create_dataset('diffuse_408',data = diffuse_408)
+            
+        return 0
+
+    def plot_mean_index(self):
+        mean_index = self.mean_index()
+        plt. figure('mean_index')
+        hp.mollview(mean_index, cmap = plt.cm.jet)
+        plt.title('The averaged index')
+        plt.savefig('avetaged_index.eps',format = 'eps')
+        plt.figure(5,figsize=(8,6))
+        plt.hist(mean_index, 100)
+        plt.tick_params(direction = 'in',top = True)
+        plt.tick_params(direction = 'in',right = True)
+        plt.title('Mean:'+ str(np.round(np.mean(mean_index),2)) + '   Std: '+ str(np.round(np.std(mean_index),2)))
+        plt.savefig('statistic_of_index.eps',format = 'eps')
+        plt.show()
+        return 0
+
+

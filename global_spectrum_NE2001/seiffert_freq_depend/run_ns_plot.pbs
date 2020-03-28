@@ -1,0 +1,15 @@
+#!/bin/bash
+
+#PBS -N seiffert_freq123
+#PBS -l nodes=12:ppn=12
+#PBS -k n
+#PBS -V
+#PBS -S /bin/bash 
+#PBS -q mid
+
+cd $PBS_O_WORKDIR
+
+ulimit -n 2048
+
+NP=`cat $PBS_NODEFILE | wc -l`
+mpirun -np $NP -machinefile $PBS_NODEFILE python global_spectrum_new.py &> output3.txt
