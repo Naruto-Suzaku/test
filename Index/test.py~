@@ -1,3 +1,0 @@
-from produce_index import produce_index
-f = produce_index(2**4, ssmpath = '/home/congyanping/Software/SSM/inSSM.hdf5')
-f.mean_index()
